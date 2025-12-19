@@ -217,10 +217,10 @@ export default function App() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     // AI Modal 狀態
-    const [analyzingFund, setAnalyzingFund] = useState(null);
+    const [analyzingFund, setAnalyzingFund] = useState<Record<string, any> | null>(null);
     const [aiAnalysisResult, setAiAnalysisResult] = useState('');
     const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
-    const [aiError, setAiError] = useState(null);
+    const [aiError, setAiError] = useState<string | null>(null);
 
     // --- 1. 資料處理區 ---
 
@@ -275,16 +275,22 @@ const RAW_MARKDOWN_DATA = `
     }, [currentMarkdown]);
 
     // 表格狀態 (當 fundsData 更新時，同步更新 tableData)
-    const [tableData, setTableData] = useState([]);
+    const [tableData, setTableData] = useState<Record<string, any>[]>([]);
     useEffect(() => {
         setTableData(fundsData);
     }, [fundsData]);
 
-    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
+    const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: string }>({ key: null, direction: 'desc' });
     const [filters, setFilters] = useState({ type: 'All', dividend: 'All', search: '' });
 
     // AI 狀態
-    const [messages, setMessages] = useState([
+    const [messages, setMessages] = useState<Array<{
+        role: string;
+        content: string;
+        type: string;
+        data?: Record<string, any>[];
+        columns?: string[];
+    }>>([
         { 
             role: 'ai', 
             content: '您好！我是您的基金理財 AI 小幫手。資料庫已從「2025年12月土銀基金理財網」更新完畢。您可以試著問我：「查詢標的類型"債券型"，給我"不配息"、"五年%"，績效前 5 名」。',
@@ -293,7 +299,7 @@ const RAW_MARKDOWN_DATA = `
     ]);
     const [inputMsg, setInputMsg] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    const messagesEndRef = useRef(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // 滾動到最新訊息
     const scrollToBottom = () => {
@@ -329,7 +335,7 @@ const RAW_MARKDOWN_DATA = `
     };
     
     // --- 新增：處理單檔基金分析 ---
-    const handleOpenAnalyzeModal = (fund) => {
+    const handleOpenAnalyzeModal = (fund: Record<string, any>) => {
         setAnalyzingFund(fund);
         setAiAnalysisResult(''); // 清空上次結果
         setAiError(null);
@@ -341,7 +347,7 @@ const RAW_MARKDOWN_DATA = `
     };
 
     // 儲存 API Key
-    const handleSaveApiKey = (key) => {
+    const handleSaveApiKey = (key: string) => {
         setUserApiKey(key);
         localStorage.setItem('gemini_api_key', key);
         setIsSettingsOpen(false);
@@ -356,7 +362,7 @@ const RAW_MARKDOWN_DATA = `
         alert("API Key 已重置為預設值。");
     };
 
-    const performFundAnalysis = async (fund) => {
+    const performFundAnalysis = async (fund: Record<string, any>) => {
         setIsAiAnalyzing(true);
         setAiError(null);
         // 建構 Prompt
@@ -384,17 +390,17 @@ const RAW_MARKDOWN_DATA = `
             const result = await callGemini(prompt, userApiKey);
             setAiAnalysisResult(result);
         } catch (error) {
-            setAiError(error.message);
+            setAiError((error as Error).message);
         } finally {
             setIsAiAnalyzing(false);
         }
     };
 
     // --- AI 分析邏輯 ---
-    const analyzeQuery = (query, data) => {
+    const analyzeQuery = (query: string, data: Record<string, any>[]) => {
         const result = {
             text: "",
-            data: [],
+            data: [] as Record<string, any>[],
             columns: ["代碼", "標的名稱", "標的類型", "一年%", "三年%", "五年%"] 
         };
 
@@ -431,7 +437,7 @@ const RAW_MARKDOWN_DATA = `
             limit = parseInt(limitMatch[1]);
         }
 
-        let filtered = data.filter(item => {
+        let filtered = data.filter((item: Record<string, any>) => {
             const typeMatch = targetTypes.length === 0 || targetTypes.some(t => item["標的類型"].includes(t));
             let divMatch = true;
             if (dividendFilter === 'no') {
@@ -442,7 +448,7 @@ const RAW_MARKDOWN_DATA = `
             return typeMatch && divMatch;
         });
 
-        filtered.sort((a, b) => {
+        filtered.sort((a: Record<string, any>, b: Record<string, any>) => {
             const valA = typeof a[sortKey] === 'number' ? a[sortKey] : -9999;
             const valB = typeof b[sortKey] === 'number' ? b[sortKey] : -9999;
             return valB - valA; 
@@ -460,14 +466,14 @@ const RAW_MARKDOWN_DATA = `
     };
 
     // --- UI 邏輯 ---
-    const handleSort = (key) => {
+    const handleSort = (key: string) => {
         let direction = 'desc';
         if (sortConfig.key === key && sortConfig.direction === 'desc') {
             direction = 'asc';
         }
         setSortConfig({ key, direction });
 
-        const sorted = [...tableData].sort((a, b) => {
+        const sorted = [...tableData].sort((a: Record<string, any>, b: Record<string, any>) => {
             let valA = a[key];
             let valB = b[key];
             if (valA === 'N/A') valA = -Infinity;
@@ -479,13 +485,13 @@ const RAW_MARKDOWN_DATA = `
         setTableData(sorted);
     };
 
-    const handleFilter = (key, value) => {
+    const handleFilter = (key: string, value: any) => {
         const newFilters = { ...filters, [key]: value };
         setFilters(newFilters);
         applyFilters(newFilters);
     };
 
-    const applyFilters = (currentFilters) => {
+    const applyFilters = (currentFilters: any) => {
         let filtered = fundsData.filter(item => {
             const matchType = currentFilters.type === 'All' || item['標的類型'] === currentFilters.type;
             const matchDiv = currentFilters.dividend === 'All' || item['配息方式'] === currentFilters.dividend;
@@ -497,7 +503,7 @@ const RAW_MARKDOWN_DATA = `
         setTableData(filtered);
     };
 
-    const handleSendMessage = async (e) => {
+    const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputMsg.trim()) return;
 
@@ -534,7 +540,7 @@ const RAW_MARKDOWN_DATA = `
                 const llmResponse = await callGemini(prompt, userApiKey);
                 aiMessage.content = `${analysis.text}\n\n✨ **AI 分析師點評**：\n${llmResponse}`;
             } catch (err) {
-                aiMessage.content = `${analysis.text}\n\n(⚠️ AI 分析無法使用: ${err.message})`; 
+                aiMessage.content = `${analysis.text}\n\n(⚠️ AI 分析無法使用: ${(err as Error).message})`; 
             }
 
         } else {
@@ -549,7 +555,7 @@ const RAW_MARKDOWN_DATA = `
                 const llmResponse = await callGemini(prompt, userApiKey);
                 aiMessage.content = `${analysis.text}\n\n🤖 **AI 建議**：\n${llmResponse}`;
             } catch (err) {
-                aiMessage.content = `${analysis.text}\n\n(⚠️ AI 建議無法使用: ${err.message})`;
+                aiMessage.content = `${analysis.text}\n\n(⚠️ AI 建議無法使用: ${(err as Error).message})`;
             }
         }
 
@@ -836,13 +842,13 @@ const RAW_MARKDOWN_DATA = `
                                                     <table className="w-full text-xs text-left text-slate-600">
                                                         <thead className="bg-slate-100 font-medium text-slate-700">
                                                             <tr>
-                                                                {msg.columns.map(c => <th key={c} className="px-3 py-2">{c}</th>)}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-slate-100">
-                                                            {msg.data.map((item, i) => (
+                                                                {msg.columns?.map((c: any) => <th key={c} className="px-3 py-2">{c}</th>)}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {msg.data?.map((item: any, i: any) => (
                                                                 <tr key={i} className="hover:bg-slate-50">
-                                                                    {msg.columns.map(col => (
+                                                                    {msg.columns?.map((col: any) => (
                                                                         <td key={col} className={`px-3 py-2 ${['一年%', '三年%', '五年%'].includes(col) ? (parseFloat(item[col]) > 0 ? 'text-red-600 font-medium' : 'text-green-600 font-medium') : ''}`}>
                                                                             {item[col]}
                                                                         </td>
