@@ -41,11 +41,12 @@ const callGemini = async (prompt: string, apiKey: string): Promise<string> => {
 };
 
 // 設定視窗組件
-const SettingsModal = ({ isOpen, onClose, apiKey, onSave }: { 
+const SettingsModal = ({ isOpen, onClose, apiKey, onSave, onReset }: { 
   isOpen: boolean; 
   onClose: () => void; 
   apiKey: string; 
   onSave: (key: string) => void; 
+  onReset: () => void;
 }) => {
     const [inputKey, setInputKey] = useState(apiKey);
 
@@ -83,21 +84,38 @@ const SettingsModal = ({ isOpen, onClose, apiKey, onSave }: {
                                 取得 API Key
                             </a>
                         </p>
+                        {import.meta.env.VITE_GEMINI_API_KEY && (
+                            <p className="text-xs text-slate-400 mt-1">
+                                此應用已配置預設 API Key，您可以保留使用或替換為您自己的 API Key。
+                            </p>
+                        )}
                     </div>
                 </div>
-                <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50 rounded-b-xl">
-                    <button 
-                        onClick={onClose}
-                        className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
-                    >
-                        取消
-                    </button>
-                    <button 
-                        onClick={() => onSave(inputKey)}
-                        className="px-6 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 shadow-sm transition-colors"
-                    >
-                        儲存設定
-                    </button>
+                <div className="p-4 border-t border-slate-100 flex justify-between gap-3 bg-slate-50 rounded-b-xl">
+                    <div className="flex gap-3">
+                        {import.meta.env.VITE_GEMINI_API_KEY && (
+                            <button 
+                                onClick={onReset}
+                                className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-lg transition-colors text-sm"
+                            >
+                                重置為預設
+                            </button>
+                        )}
+                    </div>
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={onClose}
+                            className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+                        >
+                            取消
+                        </button>
+                        <button 
+                            onClick={() => onSave(inputKey)}
+                            className="px-6 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 shadow-sm transition-colors"
+                        >
+                            儲存設定
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -189,7 +207,12 @@ export default function App() {
     
     // API Key 狀態管理
     const [userApiKey, setUserApiKey] = useState(() => {
-        return localStorage.getItem('gemini_api_key') || '';
+        // 優先使用使用者自行設定的 API Key
+        const userKey = localStorage.getItem('gemini_api_key');
+        if (userKey) return userKey;
+        
+        // 如果沒有使用者設定，使用預設的 API Key
+        return import.meta.env.VITE_GEMINI_API_KEY || '';
     });
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -323,6 +346,14 @@ const RAW_MARKDOWN_DATA = `
         localStorage.setItem('gemini_api_key', key);
         setIsSettingsOpen(false);
         alert("API Key 已儲存！現在您可以開始使用 AI 功能了。");
+    };
+
+    // 重置 API Key (回到預設值)
+    const handleResetApiKey = () => {
+        setUserApiKey(import.meta.env.VITE_GEMINI_API_KEY || '');
+        localStorage.removeItem('gemini_api_key');
+        setIsSettingsOpen(false);
+        alert("API Key 已重置為預設值。");
     };
 
     const performFundAnalysis = async (fund) => {
@@ -600,6 +631,7 @@ const RAW_MARKDOWN_DATA = `
                 onClose={() => setIsSettingsOpen(false)}
                 apiKey={userApiKey}
                 onSave={handleSaveApiKey}
+                onReset={handleResetApiKey}
             />
             
             {/* Analyze Modal (New) */}
@@ -659,7 +691,8 @@ const RAW_MARKDOWN_DATA = `
                             title="設定 API Key"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0 .73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                            {!userApiKey && <span className="absolute top-1 right-1 w-2 h-2 bg-red-400 rounded-full animate-pulse"></span>}
+                            {/* 如果沒有 API Key（包括預設值），顯示紅點提示 */}
+                            {(!userApiKey && !import.meta.env.VITE_GEMINI_API_KEY) && <span className="absolute top-1 right-1 w-2 h-2 bg-red-400 rounded-full animate-pulse"></span>}
                         </button>
                     </div>
                 </div>
